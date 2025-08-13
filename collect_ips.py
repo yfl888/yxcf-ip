@@ -20,6 +20,10 @@ for file_name in ['ipv4.txt', 'ipv6.txt']:
     if os.path.exists(file_name):
         os.remove(file_name)
 
+# 去重集合
+ipv4_set = set()
+ipv6_set = set()
+
 print("[INFO] 开始抓取 Cloudflare IP ...")
 
 # IP 校验函数
@@ -54,10 +58,6 @@ for url in urls:
         for ip in ipv6_matches:
             if is_valid_ip(ip, 6):
                 ipv6_set.add(ip.strip())
-
-# 去重集合
-ipv4_set = set()
-ipv6_set = set()
 
 # 保存 IPv4
 with open('ipv4.txt', 'w') as f4:
