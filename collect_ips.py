@@ -1,23 +1,32 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import os
+import ipaddress
 
-# 目标 URL 列表（可以继续添加）
+# 目标 URL 列表（可添加更多）
 urls = [
     'https://api.uouin.com/cloudflare.html',
     'https://ip.164746.xyz'
 ]
 
-# 正则：IPv4 和 IPv6
-ipv4_pattern = r'\b\d{1,3}(?:\.\d{1,3}){3}\b'
-ipv6_pattern = r'\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b'
+# 正则匹配
+ipv4_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+ipv6_pattern = r'\b(?:[A-Fa-f0-9]{0,4}:){2,7}[A-Fa-f0-9]{0,4}\b'
 
+# 去重集合
 ipv4_set = set()
 ipv6_set = set()
 
 print("[INFO] 开始抓取 Cloudflare IP ...")
 
+# IP 校验函数
+def is_valid_ip(ip, version):
+    try:
+        return ipaddress.ip_address(ip).version == version
+    except ValueError:
+        return False
+
+# 抓取并提取
 for url in urls:
     try:
         resp = requests.get(url, timeout=10)
@@ -31,14 +40,16 @@ for url in urls:
 
     for element in elements:
         text = element.get_text()
+        # 提取 IPv4
         ipv4_matches = re.findall(ipv4_pattern, text)
-        ipv6_matches = re.findall(ipv6_pattern, text)
-
         for ip in ipv4_matches:
-            ipv4_set.add(ip.strip())
+            if is_valid_ip(ip, 4):
+                ipv4_set.add(ip.strip())
+
+        # 提取 IPv6
+        ipv6_matches = re.findall(ipv6_pattern, text)
         for ip in ipv6_matches:
-            # 过滤掉短 IPv6（如 ::1）
-            if ":" in ip and len(ip) > 6:
+            if is_valid_ip(ip, 6):
                 ipv6_set.add(ip.strip())
 
 # 保存 IPv4
@@ -53,4 +64,3 @@ with open('ipv6.txt', 'w') as f6:
 
 print(f"[DONE] 共获取 IPv4: {len(ipv4_set)} 个, IPv6: {len(ipv6_set)} 个")
 print("文件已生成：ipv4.txt, ipv6.txt")
-
