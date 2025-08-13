@@ -14,9 +14,9 @@ urls = [
 ipv4_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
 ipv6_pattern = r'\b(?:[A-Fa-f0-9]{0,4}:){2,7}[A-Fa-f0-9]{0,4}\b'
 
-# 去重集合
-ipv4_set = set()
-ipv6_set = set()
+# 检查ipv4/ipv6.txt文件是否存在,如果存在则删除它
+if os.path.exists('ipv4.txt','ipv6.txt'):
+    os.remove('ipv4.txt','ipv6.txt')
 
 print("[INFO] 开始抓取 Cloudflare IP ...")
 
@@ -52,6 +52,10 @@ for url in urls:
         for ip in ipv6_matches:
             if is_valid_ip(ip, 6):
                 ipv6_set.add(ip.strip())
+
+# 去重集合
+ipv4_set = set()
+ipv6_set = set()
 
 # 保存 IPv4
 with open('ipv4.txt', 'w') as f4:
