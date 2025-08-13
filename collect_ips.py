@@ -14,9 +14,10 @@ urls = [
 ipv4_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
 ipv6_pattern = r'\b(?:[A-Fa-f0-9]{0,4}:){2,7}[A-Fa-f0-9]{0,4}\b'
 
-# 检查ipv4/ipv6.txt文件是否存在,如果存在则删除它
-if os.path.exists('ipv4.txt, ipv6.txt'):
-    os.remove('ipv4.txt, ipv6.txt')
+# 检查ipv4.txt, ipv6.txt文件是否存在,如果存在则删除它
+for file_name in ['ipv4.txt', 'ipv6.txt']:
+    if os.path.exists(file_name):
+        os.remove(file_name)
 
 print("[INFO] 开始抓取 Cloudflare IP ...")
 
