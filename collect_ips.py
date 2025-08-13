@@ -6,7 +6,9 @@ import ipaddress
 # 目标 URL 列表（可添加更多）
 urls = [
     'https://api.uouin.com/cloudflare.html',
-    'https://ip.164746.xyz'
+    'https://ip.164746.xyz',
+    'https://addressesapi.090227.xyz/cmcc-ipv6',
+    'https://stock.hostmonit.com/CloudFlareYesV6'
 ]
 
 # 正则匹配
