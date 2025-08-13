@@ -7,7 +7,7 @@ import ipaddress
 urls = [
     'https://api.uouin.com/cloudflare.html',
     'https://ip.164746.xyz',
-    'https://addressesapi.090227.xyz/cmcc-ipv6',
+    'https://addressesapi.090227.xyz/cmcc-ipv6'
 ]
 
 # 正则匹配
