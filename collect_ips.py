@@ -1,67 +1,60 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import ipaddress
+import os
+import time
 
-# 目标 URL 列表（可添加更多）
+# 目标URL列表
 urls = [
     'https://api.uouin.com/cloudflare.html',
-    'https://ip.164746.xyz',
-    'https://addressesapi.090227.xyz/cmcc-ipv6'
+    'https://ip.164746.xyz'
 ]
 
-# 正则匹配
-ipv4_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-ipv6_pattern = r'\b(?:[A-Fa-f0-9]{0,4}:){2,7}[A-Fa-f0-9]{0,4}\b'
+# IPv4 和 IPv6 正则表达式
+ipv4_pattern = r'(?:\d{1,3}\.){3}\d{1,3}'
+ipv6_pattern = r'(?:[A-Fa-f0-9]{1,4}:){1,7}[A-Fa-f0-9]{1,4}'
+ip_pattern = rf'{ipv4_pattern}|{ipv6_pattern}'
 
-# 去重集合
+# 存储IP集合
 ipv4_set = set()
 ipv6_set = set()
 
-print("[INFO] 开始抓取 Cloudflare IP ...")
-
-# IP 校验函数
-def is_valid_ip(ip, version):
-    try:
-        return ipaddress.ip_address(ip).version == version
-    except ValueError:
-        return False
-
-# 抓取并提取
 for url in urls:
     try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-    except Exception as e:
-        print(f"[ERROR] 无法访问 {url} - {e}")
+        # 加随机参数防缓存
+        response = requests.get(url, params={"_t": int(time.time())}, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[错误] 无法访问 {url} - {e}")
         continue
 
-    soup = BeautifulSoup(resp.text, 'html.parser')
-    elements = soup.find_all(['tr', 'li', 'p', 'span', 'div'])
+    soup = BeautifulSoup(response.text, 'html.parser')
+    elements = soup.find_all(['tr', 'li'])
 
     for element in elements:
-        text = element.get_text()
-        # 提取 IPv4
-        ipv4_matches = re.findall(ipv4_pattern, text)
-        for ip in ipv4_matches:
-            if is_valid_ip(ip, 4):
-                ipv4_set.add(ip.strip())
+        element_text = element.get_text()
+        ip_matches = re.findall(ip_pattern, element_text)
 
-        # 提取 IPv6
-        ipv6_matches = re.findall(ipv6_pattern, text)
-        for ip in ipv6_matches:
-            if is_valid_ip(ip, 6):
-                ipv6_set.add(ip.strip())
+        for ip in ip_matches:
+            if re.fullmatch(ipv4_pattern, ip):
+                ipv4_set.add(ip)
+            elif re.fullmatch(ipv6_pattern, ip):
+                ipv6_set.add(ip)
 
-# 保存 IPv4
-with open('ipv4.txt', 'w') as f4:
-    for ip in sorted(ipv4_set):
-        f4.write(ip + '\n')
+# 保存并检测变化
+def save_and_check(filename, new_ips):
+    old_ips = set()
+    if os.path.exists(filename):
+        with open(filename, 'r') as f:
+            old_ips = set(line.strip() for line in f if line.strip())
 
-# 保存 IPv6
-with open('ipv6.txt', 'w') as f6:
-    for ip in sorted(ipv6_set):
-        f6.write(ip + '\n')
+    if new_ips != old_ips:
+        with open(filename, 'w') as f:
+            for ip in sorted(new_ips):
+                f.write(ip + '\n')
+        print(f"[更新] {filename} 已更新，共 {len(new_ips)} 个 IP")
+    else:
+        print(f"[无变化] {filename} 内容未变")
 
-print(f"[DONE] 共获取 IPv4: {len(ipv4_set)} 个, IPv6: {len(ipv6_set)} 个")
-print("文件已生成：ipv4.txt, ipv6.txt")
+save_and_check('ipv4.txt', ipv4_set)
+save_and_check('ipv6.txt', ipv6_set)
