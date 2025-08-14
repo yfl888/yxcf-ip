@@ -2,59 +2,43 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import os
-import time
 
 # 目标URL列表
-urls = [
-    'https://api.uouin.com/cloudflare.html',
-    'https://ip.164746.xyz'
-]
+urls = ['https://api.uouin.com/cloudflare.html', 
+        'https://ip.164746.xyz'
+        ]
 
-# IPv4 和 IPv6 正则表达式
-ipv4_pattern = r'(?:\d{1,3}\.){3}\d{1,3}'
-ipv6_pattern = r'(?:[A-Fa-f0-9]{1,4}:){1,7}[A-Fa-f0-9]{1,4}'
-ip_pattern = rf'{ipv4_pattern}|{ipv6_pattern}'
+# 正则表达式用于匹配IP地址
+ip_pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
 
-# 存储IP集合
-ipv4_set = set()
-ipv6_set = set()
+# 检查ip.txt文件是否存在,如果存在则删除它
+if os.path.exists('ip.txt'):
+    os.remove('ip.txt')
 
-for url in urls:
-    try:
-        # 加随机参数防缓存
-        response = requests.get(url, params={"_t": int(time.time())}, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"[错误] 无法访问 {url} - {e}")
-        continue
+# 创建一个文件来存储IP地址
+with open('ip.txt', 'w') as file:
+    for url in urls:
+        # 发送HTTP请求获取网页内容
+        response = requests.get(url)
+        
+        # 使用BeautifulSoup解析HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 根据网站的不同结构找到包含IP地址的元素
+        if url == 'https://api.uouin.com/cloudflare.html':
+            elements = soup.find_all('tr')
+        elif url == 'https://ip.164746.xyz':
+            elements = soup.find_all('tr')
+        else:
+            elements = soup.find_all('li')
+        
+        # 遍历所有元素,查找IP地址
+        for element in elements:
+            element_text = element.get_text()
+            ip_matches = re.findall(ip_pattern, element_text)
+            
+            # 如果找到IP地址,则写入文件
+            for ip in ip_matches:
+                file.write(ip + '\n')
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    elements = soup.find_all(['tr', 'li'])
-
-    for element in elements:
-        element_text = element.get_text()
-        ip_matches = re.findall(ip_pattern, element_text)
-
-        for ip in ip_matches:
-            if re.fullmatch(ipv4_pattern, ip):
-                ipv4_set.add(ip)
-            elif re.fullmatch(ipv6_pattern, ip):
-                ipv6_set.add(ip)
-
-# 保存并检测变化
-def save_and_check(filename, new_ips):
-    old_ips = set()
-    if os.path.exists(filename):
-        with open(filename, 'r') as f:
-            old_ips = set(line.strip() for line in f if line.strip())
-
-    if new_ips != old_ips:
-        with open(filename, 'w') as f:
-            for ip in sorted(new_ips):
-                f.write(ip + '\n')
-        print(f"[更新] {filename} 已更新，共 {len(new_ips)} 个 IP")
-    else:
-        print(f"[无变化] {filename} 内容未变")
-
-save_and_check('ipv4.txt', ipv4_set)
-save_and_check('ipv6.txt', ipv6_set)
+print('IP地址已保存到ip.txt文件中。')
