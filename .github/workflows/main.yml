@@ -1,5 +1,3 @@
-import requests
-
 name: Update IP List
 
 on:
