@@ -1,31 +1,67 @@
 import requests
+from bs4 import BeautifulSoup
+import re
+import ipaddress
 
-def get_ip(url):
+# 目标 URL 列表（可添加更多）
+urls = [
+    'https://api.uouin.com/cloudflare.html',
+    'https://ip.164746.xyz',
+    'https://addressesapi.090227.xyz/cmcc-ipv6'
+]
+
+# 正则匹配
+ipv4_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+ipv6_pattern = r'\b(?:[A-Fa-f0-9]{0,4}:){2,7}[A-Fa-f0-9]{0,4}\b'
+
+# 去重集合
+ipv4_set = set()
+ipv6_set = set()
+
+print("[INFO] 开始抓取 Cloudflare IP ...")
+
+# IP 校验函数
+def is_valid_ip(ip, version):
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching IP: {e}")
-        return None
+        return ipaddress.ip_address(ip).version == version
+    except ValueError:
+        return False
 
-def main():
-    # 获取IPv4地址
-    ipv4_url = 'https://api.ipify.org'
-    ipv4 = get_ip(ipv4_url)
-    
-    # 获取IPv6地址
-    ipv6_url = 'https://api64.ipify.org'
-    ipv6 = get_ip(ipv6_url)
+# 抓取并提取
+for url in urls:
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"[ERROR] 无法访问 {url} - {e}")
+        continue
 
-    # 更新ip.txt
-    with open("ip.txt", "w") as file:
-        if ipv4:
-            file.write(f"IPv4: {ipv4}\n")
-        if ipv6:
-            file.write(f"IPv6: {ipv6}\n")
-    
-    print("IP addresses updated in ip.txt")
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    elements = soup.find_all(['tr', 'li', 'p', 'span', 'div'])
 
-if __name__ == "__main__":
-    main()
+    for element in elements:
+        text = element.get_text()
+        # 提取 IPv4
+        ipv4_matches = re.findall(ipv4_pattern, text)
+        for ip in ipv4_matches:
+            if is_valid_ip(ip, 4):
+                ipv4_set.add(ip.strip())
+
+        # 提取 IPv6
+        ipv6_matches = re.findall(ipv6_pattern, text)
+        for ip in ipv6_matches:
+            if is_valid_ip(ip, 6):
+                ipv6_set.add(ip.strip())
+
+# 保存 IPv4
+with open('ipv4.txt', 'w') as f4:
+    for ip in sorted(ipv4_set):
+        f4.write(ip + '\n')
+
+# 保存 IPv6
+with open('ipv6.txt', 'w') as f6:
+    for ip in sorted(ipv6_set):
+        f6.write(ip + '\n')
+
+print(f"[DONE] 共获取 IPv4: {len(ipv4_set)} 个, IPv6: {len(ipv6_set)} 个")
+print("文件已生成：ipv4.txt, ipv6.txt")
